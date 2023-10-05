@@ -1,61 +1,43 @@
 #!/usr/bin/python3
-"""A module for web application deployment with Fabric."""
-import os
-from datetime import datetime
-from fabric.api import env, local, put, run, runs_once
+"""
+    Distributes an archive to your web servers,
+    using the function do_deploy
+    def do_deploy(archive_path):
+    Return False iff archive path doesn't exist
+"""
 
+from fabric.api import put, run, env, sudo
+from os.path import exists
+env.hosts = ['34.207.237.54', '54.160.84.46']
+env.user = 'ubuntu'
+env.identity = '~/.ssh/school'
+env.password = None
 
-env.hosts = ["34.73.0.174", "35.196.78.105"]
-"""The list of host server IP addresses."""
-
-
-@runs_once
-def do_pack():
-    """Archives the static files."""
-    if not os.path.isdir("versions"):
-        os.mkdir("versions")
-    cur_time = datetime.now()
-    output = "versions/web_static_{}{}{}{}{}{}.tgz".format(
-        cur_time.year,
-        cur_time.month,
-        cur_time.day,
-        cur_time.hour,
-        cur_time.minute,
-        cur_time.second
-    )
-    try:
-        print("Packing web_static to {}".format(output))
-        local("tar -cvzf {} web_static".format(output))
-        archize_size = os.stat(output).st_size
-        print("web_static packed: {} -> {} Bytes".format(output, archize_size))
-    except Exception:
-        output = None
-    return output
-
+#run("rm -rf /data/web_static/releases/web_static_20230506221613/images")
+#run("rm -rf /data/web_static/releases/web_static_20230506221613/styles")
 
 def do_deploy(archive_path):
-    """Deploys the static files to the host servers.
-    Args:
-        archive_path (str): The path to the archived static files.
     """
-    if not os.path.exists(archive_path):
+    Deploys an archive to a server
+    """
+    if exists(archive_path) is False:
         return False
-    file_name = os.path.basename(archive_path)
-    folder_name = file_name.replace(".tgz", "")
-    folder_path = "/data/web_static/releases/{}/".format(folder_name)
-    success = False
     try:
-        put(archive_path, "/tmp/{}".format(file_name))
-        run("mkdir -p {}".format(folder_path))
-        run("tar -xzf /tmp/{} -C {}".format(file_name, folder_path))
-        run("rm -rf /tmp/{}".format(file_name))
-        run("mv {}web_static/* {}".format(folder_path, folder_path))
-        run("rm -rf {}web_static".format(folder_path))
-        run("rm -rf /data/web_static/current")
-        run("ln -s {} /data/web_static/current".format(folder_path))
-        print('New version deployed!')
-        success = True
-    except Exception:
-        success = False
-    return success
+        archive_name = archive_path.split("/")[-1]
+        no_ext = archive_name.split(".")[0]
+        path_no_ext = "/data/web_static/releases/" + no_ext
 
+        put(archive_path, "/tmp/")
+        sudo("mkdir -p {}".format(path_no_ext))
+        sudo("tar -xzf /tmp/{} -C {}/".format(archive_name, path_no_ext))
+        sudo("rm /tmp/{}".format(archive_name))
+        sudo("mv {}/web_static/* {}/".format(path_no_ext, path_no_ext))
+        sudo("rm -rf {}/web_static".format(path_no_ext))
+        sudo("rm -rf /data/web_static/current")
+        sudo("ln -s {}/ /data/web_static/current".format(path_no_ext))
+        sudo("chmod -R 755 {}".format(path_no_ext))
+
+        print("New version deployed!")
+        return True
+    except FileNotFoundError:
+        return False
