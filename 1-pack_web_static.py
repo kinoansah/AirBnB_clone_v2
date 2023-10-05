@@ -1,30 +1,33 @@
 #!/usr/bin/python3
-"""A module for web application deployment with Fabric."""
-import os
-from datetime import datetime
-from fabric.api import local, runs_once
+"""
+    Generates a .tgz archive from contents of
+    the web_static folder of your AirBnB Clone
+    repo, using the function do_pack.
+
+    def do_pack():
+    All files must be added to the final archive
+    and stored in the folder "versions"
+
+    The name of the archive created must be
+    web_static_<year><month><day><hour><minute><second>.tgz
+
+    The function do_pack must return the archive
+    path if the archive has been correctly generated.
+    Otherwise, it should return None
+"""
+import datetime
+from fabric.api import local
+from os.path import isdir
 
 
-@runs_once
 def do_pack():
-    """Archives the static files."""
-    if not os.path.isdir("versions"):
-        os.mkdir("versions")
-    cur_time = datetime.now()
-    output = "versions/web_static_{}{}{}{}{}{}.tgz".format(
-        cur_time.year,
-        cur_time.month,
-        cur_time.day,
-        cur_time.hour,
-        cur_time.minute,
-        cur_time.second
-    )
+    """Compresses the web_static folder into a .tgz archive"""
     try:
-        print("Packing web_static to {}".format(output))
-        local("tar -cvzf {} web_static".format(output))
-        archize_size = os.stat(output).st_size
-        print("web_static packed: {} -> {} Bytes".format(output, archize_size))
-    except Exception:
-        output = None
-    return output
-
+        day = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        if isdir("versions") is False:
+            local("mkdir versions")
+        file_N = "versions/web_static_{}.tgz".format(day)
+        local("tar -czvf {} web_static".format(file_N))
+        return file_N
+    except FileNotFoundError:
+        return None
