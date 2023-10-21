@@ -1,35 +1,34 @@
 #!/usr/bin/python3
-"""
-Flask web application
-@authors: Samuel Atiemo & Mahmoud Khairi.
-"""
+"""Importing Flask to run the web app"""
+from flask import Flask, render_template
 from models import storage
 from models.state import State
-from flask import Flask, render_template
+
+
 app = Flask(__name__)
 
 
 @app.teardown_appcontext
-def appcontext_teardown(self):
-    """use storage for fetching data from the storage engine
-    """
+def close(self):
+    """ Method to close the session """
     storage.close()
 
 
 @app.route('/states', strict_slashes=False)
-def state_info():
-    """Display a HTML page inside the tag BODY"""
-    return render_template('7-states_list.html',
-                           states=storage.all(State))
+def state():
+    """Displays a html page with states"""
+    states = storage.all(State)
+    return render_template('9-states.html', states=states, mode='all')
 
 
-@app.route('/states/<string:id>', strict_slashes=False)
-def state_id(id=None):
-    """Display a HTML page inside the tag BODY"""
-    return render_template('9-states.html',
-                           states=storage.all(State)
-                           .get('State.{}'.format(id)))
+@app.route('/states/<id>', strict_slashes=False)
+def state_by_id(id):
+    """Displays a html page with citys of that state"""
+    for state in storage.all(State).values():
+        if state.id == id:
+            return render_template('9-states.html', states=state, mode='id')
+    return render_template('9-states.html', states=state, mode='none')
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host="0.0.0.0", port="5000")
